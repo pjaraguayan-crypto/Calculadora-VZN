@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Cambio VZN | BCV vs Binance P2P</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        binance: '#F0B90B',
+                        bcv: '#3B82F6',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #090d16;
+            color: #f1f5f9;
+        }
+        /* Touch friendly active states */
+        .btn-tap {
+            transition: transform 0.1s ease, background-color 0.15s ease;
+        }
+        .btn-tap:active {
+            transform: scale(0.96);
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-indigo-500 selection:text-white pb-10">
+
+    <!-- Header / Navbar -->
+    <header class="sticky top-0 z-30 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-4 py-3 sm:px-8">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 text-white font-extrabold text-lg">
+                    🇻🇪
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold text-white leading-tight flex items-center gap-2">
+                        Cambio VZN
+                        <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-semibold">
+                            BCV vs Binance
+                        </span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Calculadora de Divisas en Tiempo Real</p>
+                </div>
+            </div>
+            
+            <button id="btn-open-rates-modal" class="btn-tap flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm font-medium px-3.5 py-2 rounded-xl text-slate-200 shadow-sm transition">
+                <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                <span class="hidden sm:inline">Editar Tasas</span>
+                <span class="sm:hidden">Tasas</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-2xl mx-auto w-full px-4 pt-6 space-y-6">
+
+        <!-- Top Notification & Auto-Sync Banner -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm text-slate-300 shadow-lg">
+            <div class="flex items-center gap-3 overflow-hidden">
+                <span class="relative flex h-3 w-3 flex-shrink-0">
+                  <span id="sync-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span id="sync-dot" class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 truncate">
+                    <span id="sync-status-text" class="font-semibold text-slate-100">Auto-sincronizando tasas...</span>
+                    <span id="last-update-time" class="text-slate-400 font-mono text-[11px] truncate">BCV: --:-- | Binance: --:--</span>
+                </div>
+            </div>
+            
+            <button id="btn-quick-sync" class="btn-tap self-end sm:self-auto flex items-center gap-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-3.5 py-1.5 rounded-xl font-medium text-xs transition">
+                <svg id="sync-spinner" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.033 8.033 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <span id="sync-btn-label">Actualizar Ahora</span>
+            </button>
+        </div>
+
+        <!-- MAIN CALCULATOR CARD: INPUT -> PRESETS -> RESULTS -> COPY -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-5">
+            
+            <!-- 1. Input Card & Direction Swap -->
+            <div>
+                <div class="flex items-center justify-between mb-2.5">
+                    <label id="input-label" for="amount-input" class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        Monto a Convertir (USD $)
+                    </label>
+                    <button id="btn-toggle-direction" class="btn-tap inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-950/50 border border-indigo-800/50 px-2.5 py-1 rounded-lg font-medium transition">
+                        <svg id="swap-icon" class="w-3.5 h-3.5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                        </svg>
+                        <span id="direction-text">Invertir (Bs ➔ $)</span>
+                    </button>
+                </div>
+
+                <div class="relative flex items-center">
+                    <span id="currency-symbol" class="absolute left-4 text-2xl font-bold text-slate-400">$</span>
+                    <input 
+                        type="number" 
+                        id="amount-input" 
+                        value="10" 
+                        placeholder="0.00" 
+                        step="any"
+                        min="0"
+                        class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white font-extrabold text-3xl sm:text-4xl rounded-xl pl-10 pr-4 py-3.5 outline-none transition font-mono placeholder-slate-600"
+                    />
+                </div>
+            </div>
+
+            <!-- 2. Quick Preset Buttons -->
+            <div>
+                <span class="text-[11px] font-medium text-slate-500 mb-2 block uppercase tracking-wider">Montos Rápidos:</span>
+                <div class="grid grid-cols-5 gap-2" id="presets-container">
+                    <button data-preset="5" class="preset-btn btn-tap bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-lg border border-slate-700/60">$5</button>
+                    <button data-preset="10" class="preset-btn btn-tap bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 text-xs font-semibold py-2 rounded-lg">$10</button>
+                    <button data-preset="20" class="preset-btn btn-tap bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-lg border border-slate-700/60">$20</button>
+                    <button data-preset="50" class="preset-btn btn-tap bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-lg border border-slate-700/60">$50</button>
+                    <button data-preset="100" class="preset-btn btn-tap bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-lg border border-slate-700/60">$100</button>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-800 pt-4 space-y-4">
+                <!-- 3. SECCIÓN DE RESULTADOS (INMEDIATAMENTE DEBAJO) -->
+                <div class="bg-gradient-to-b from-indigo-950/70 to-slate-950 border border-indigo-500/30 rounded-2xl p-5 shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-28 h-28 bg-indigo-500/10 rounded-full filter blur-2xl pointer-events-none"></div>
+
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-indigo-300" id="result-title">
+                            Resultado Estimado
+                        </span>
+                        <span id="active-rate-badge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                            Tasa BCV
+                        </span>
+                    </div>
+
+                    <!-- Main Output Number -->
+                    <div class="my-3">
+                        <div id="main-result-value" class="text-3xl sm:text-4xl font-black text-white font-mono tracking-tight leading-none break-all">
+                            Bs. 0,00
+                        </div>
+                        <p id="main-result-subtext" class="text-xs text-slate-400 mt-2">
+                            Calculado a tasa de <span class="font-mono font-semibold text-slate-200" id="active-rate-num">Bs. 0,00</span> por dólar.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Comparativa BCV vs Binance & Brecha -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                            <span class="text-xs text-slate-300 font-medium">Monto BCV:</span>
+                        </div>
+                        <span id="cmp-bcv-total" class="font-mono text-sm font-bold text-slate-100">Bs. 0,00</span>
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                            <span class="text-xs text-slate-300 font-medium">Monto Binance:</span>
+                        </div>
+                        <span id="cmp-binance-total" class="font-mono text-sm font-bold text-amber-400">Bs. 0,00</span>
+                    </div>
+                </div>
+
+                <!-- Difference / Brecha Box -->
+                <div class="bg-gradient-to-r from-amber-500/10 to-indigo-500/10 border border-amber-500/20 rounded-xl p-3.5 flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-amber-300 block">Diferencia / Brecha</span>
+                        <span class="text-[11px] text-slate-400">Entre BCV y Binance P2P</span>
+                    </div>
+                    <div class="text-right">
+                        <div id="cmp-diff-bs" class="text-sm font-bold font-mono text-white">+Bs. 0,00</div>
+                        <span id="cmp-diff-pct" class="text-[11px] font-bold text-amber-400 bg-amber-500/20 px-1.5 py-0.5 rounded inline-block mt-0.5">
+                            +0.00%
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 4. Botón de Copiar Resumen -->
+                <button id="btn-copy-result" class="btn-tap w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 012-2v-8a2 2 0 01-2-2h-8a2 2 0 01-2 2v8a2 2 0 012 2z"></path>
+                    </svg>
+                    <span id="copy-btn-text">Copiar Resumen para Enviar</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 5. PANEL INFERIOR CON EL ESTADO Y SELECCIÓN DE TASAS -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-3">
+            <div class="flex items-center justify-between">
+                <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 block">
+                    Selecciona la Tasa a Aplicar:
+                </label>
+                <span class="text-[11px] text-slate-500">Haz clic para cambiar</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+                <!-- BCV Card -->
+                <div id="card-bcv" class="rate-card cursor-pointer p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-blue-500/50 transition relative group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-bold text-blue-400 flex items-center gap-1">
+                            <span class="w-2 h-2 rounded-full bg-blue-500"></span> BCV
+                        </span>
+                        <span class="text-[10px] bg-blue-500/10 text-blue-300 border border-blue-500/20 px-1.5 py-0.5 rounded font-medium">Oficial</span>
+                    </div>
+                    <div class="text-[11px] text-slate-400 flex items-center justify-between">
+                        <span>Banco Central</span>
+                        <span id="bcv-time-badge" class="text-[10px] font-mono text-slate-500">API</span>
+                    </div>
+                    <div class="text-lg font-bold font-mono text-white mt-1" id="rate-bcv-display">Cargando...</div>
+                </div>
+
+                <!-- Binance Card -->
+                <div id="card-binance" class="rate-card cursor-pointer p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-amber-500/50 transition relative group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-bold text-amber-400 flex items-center gap-1">
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span> Binance
+                        </span>
+                        <span class="text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20 px-1.5 py-0.5 rounded font-medium">P2P USDT</span>
+                    </div>
+                    <div class="text-[11px] text-slate-400 flex items-center justify-between">
+                        <span>Mercado P2P</span>
+                        <span id="binance-time-badge" class="text-[10px] font-mono text-slate-500">API</span>
+                    </div>
+                    <div class="text-lg font-bold font-mono text-white mt-1" id="rate-binance-display">Cargando...</div>
+                </div>
+
+                <!-- Custom Card -->
+                <div id="card-custom" class="rate-card cursor-pointer p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-violet-500/50 transition relative group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-bold text-violet-400 flex items-center gap-1">
+                            <span class="w-2 h-2 rounded-full bg-violet-500"></span> Personal
+                        </span>
+                        <span class="text-[10px] bg-violet-500/10 text-violet-300 border border-violet-500/20 px-1.5 py-0.5 rounded font-medium">Manual</span>
+                    </div>
+                    <div class="text-[11px] text-slate-400">Tasa Propia</div>
+                    <div class="text-lg font-bold font-mono text-white mt-1" id="rate-custom-display">Bs. 68,00</div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-12 text-center text-xs text-slate-500">
+        <p>Calculadora de Cambio Informativa • Hecho para Venezuela 🇻🇪</p>
+    </footer>
+
+    <!-- MODAL: EDIT RATES -->
+    <div id="rates-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden transition-opacity">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-5 relative animate-in fade-in zoom-in duration-200">
+            
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    </svg>
+                    Actualizar Tasas Diarias
+                </h3>
+                <button id="btn-close-modal" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <!-- BCV Rate Input -->
+                <div>
+                    <label class="text-xs font-semibold text-blue-400 block mb-1">Tasa BCV (Bs. / USD)</label>
+                    <input type="number" id="modal-input-bcv" step="any" class="w-full bg-slate-950 border border-slate-700 focus:border-blue-500 rounded-xl px-3.5 py-2.5 text-white font-mono text-base outline-none">
+                </div>
+
+                <!-- Binance Rate Input -->
+                <div>
+                    <label class="text-xs font-semibold text-amber-400 block mb-1">Tasa Binance P2P (Bs. / USD)</label>
+                    <input type="number" id="modal-input-binance" step="any" class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-white font-mono text-base outline-none">
+                </div>
+
+                <!-- Custom Rate Input -->
+                <div>
+                    <label class="text-xs font-semibold text-violet-400 block mb-1">Tasa Personalizada (Bs. / USD)</label>
+                    <input type="number" id="modal-input-custom" step="any" class="w-full bg-slate-950 border border-slate-700 focus:border-violet-500 rounded-xl px-3.5 py-2.5 text-white font-mono text-base outline-none">
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button id="btn-save-rates" class="btn-tap flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl text-sm transition">
+                    Guardar Cambios
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Toast Notification Box -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-800 text-white text-xs sm:text-sm font-medium px-4 py-3 rounded-xl border border-slate-700 shadow-2xl flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        <span id="toast-message">Notificación</span>
+    </div>
+
+    <!-- Application JavaScript Logic -->
+    <script>
+        // API Configuration
+        const API_URL = 'https://ve.dolarapi.com/v1/dolares';
+
+        // State Management
+        const DEFAULT_RATES = {
+            BCV: 64.50,
+            BINANCE: 71.20,
+            CUSTOM: 68.00
+        };
+
+        let state = {
+            amount: 10,
+            direction: 'USD_TO_VES', // 'USD_TO_VES' | 'VES_TO_USD'
+            activeRateType: 'BCV',  // 'BCV' | 'BINANCE' | 'CUSTOM'
+            rates: { ...DEFAULT_RATES },
+            timestamps: {
+                BCV: null,
+                BINANCE: null,
+                lastFetch: null
+            },
+            isLoading: false
+        };
+
+        // DOM Elements
+        const amountInput = document.getElementById('amount-input');
+        const inputLabel = document.getElementById('input-label');
+        const currencySymbol = document.getElementById('currency-symbol');
+        const btnToggleDirection = document.getElementById('btn-toggle-direction');
+        const swapIcon = document.getElementById('swap-icon');
+        const directionText = document.getElementById('direction-text');
+
+        // Rate displays
+        const rateBcvDisplay = document.getElementById('rate-bcv-display');
+        const rateBinanceDisplay = document.getElementById('rate-binance-display');
+        const rateCustomDisplay = document.getElementById('rate-custom-display');
+        const bcvTimeBadge = document.getElementById('bcv-time-badge');
+        const binanceTimeBadge = document.getElementById('binance-time-badge');
+
+        // Sync & Banner UI
+        const syncStatusText = document.getElementById('sync-status-text');
+        const lastUpdateTime = document.getElementById('last-update-time');
+        const syncSpinner = document.getElementById('sync-spinner');
+        const syncBtnLabel = document.getElementById('sync-btn-label');
+        const syncDot = document.getElementById('sync-dot');
+        const syncPing = document.getElementById('sync-ping');
+
+        // Cards
+        const cardBcv = document.getElementById('card-bcv');
+        const cardBinance = document.getElementById('card-binance');
+        const cardCustom = document.getElementById('card-custom');
+
+        // Main Result
+        const resultTitle = document.getElementById('result-title');
+        const activeRateBadge = document.getElementById('active-rate-badge');
+        const mainResultValue = document.getElementById('main-result-value');
+        const activeRateNum = document.getElementById('active-rate-num');
+
+        // Comparison
+        const cmpBcvTotal = document.getElementById('cmp-bcv-total');
+        const cmpBinanceTotal = document.getElementById('cmp-binance-total');
+        const cmpDiffBs = document.getElementById('cmp-diff-bs');
+        const cmpDiffPct = document.getElementById('cmp-diff-pct');
+
+        // Modal
+        const ratesModal = document.getElementById('rates-modal');
+        const btnOpenModal = document.getElementById('btn-open-rates-modal');
+        const btnCloseModal = document.getElementById('btn-close-modal');
+        const btnSaveRates = document.getElementById('btn-save-rates');
+        const modalInputBcv = document.getElementById('modal-input-bcv');
+        const modalInputBinance = document.getElementById('modal-input-binance');
+        const modalInputCustom = document.getElementById('modal-input-custom');
+        const btnQuickSync = document.getElementById('btn-quick-sync');
+
+        // Formatting Helpers
+        function formatVES(val) {
+            return 'Bs. ' + Number(val).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function formatUSD(val) {
+            return '$' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function formatRate(val) {
+            return 'Bs. ' + Number(val).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function formatTimeShort(dateObj) {
+            if (!dateObj) return '--:--';
+            const d = new Date(dateObj);
+            if (isNaN(d.getTime())) return '--:--';
+            return d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', hour12: true });
+        }
+
+        // Automatic API Fetch
+        async function fetchRatesFromAPI(userInitiated = false) {
+            state.isLoading = true;
+            updateSyncUIStatus('loading');
+
+            try {
+                const response = await fetch(API_URL, { cache: 'no-cache' });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (Array.isArray(data)) {
+                    data.forEach(item => {
+                        const fuente = (item.fuente || item.nombre || '').toLowerCase();
+                        const rateVal = parseFloat(item.promedio || item.monto || item.valor || 0);
+                        const updateTime = item.fechaActualizacion || new Date().toISOString();
+
+                        if (rateVal > 0) {
+                            if (fuente.includes('oficial') || fuente.includes('bcv')) {
+                                state.rates.BCV = rateVal;
+                                state.timestamps.BCV = updateTime;
+                            } else if (fuente.includes('paralelo') || fuente.includes('binance') || fuente.includes('cripto')) {
+                                state.rates.BINANCE = rateVal;
+                                state.timestamps.BINANCE = updateTime;
+                            }
+                        }
+                    });
+                }
+
+                state.timestamps.lastFetch = new Date().toISOString();
+                saveRatesToStorage();
+                renderRates();
+                calculate();
+                updateSyncUIStatus('success');
+
+                if (userInitiated) {
+                    showToast('Tasas actualizadas desde la API oficial 🔄');
+                }
+            } catch (err) {
+                console.warn('API sync fallback to cached storage:', err);
+                loadSavedRates();
+                updateSyncUIStatus('offline');
+                if (userInitiated) {
+                    showToast('Sin conexión. Usando últimas tasas guardadas en caché.');
+                }
+            } finally {
+                state.isLoading = false;
+            }
+        }
+
+        // Update UI status banner and sync indicators
+        function updateSyncUIStatus(status) {
+            if (status === 'loading') {
+                syncSpinner.classList.add('animate-spin');
+                syncStatusText.innerText = 'Consultando API...';
+                syncBtnLabel.innerText = 'Sincronizando';
+                syncDot.className = 'relative inline-flex rounded-full h-3 w-3 bg-amber-500';
+                syncPing.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75';
+            } else if (status === 'success') {
+                syncSpinner.classList.remove('animate-spin');
+                syncStatusText.innerText = 'Tasas en tiempo real (API)';
+                syncBtnLabel.innerText = 'Actualizar Ahora';
+                syncDot.className = 'relative inline-flex rounded-full h-3 w-3 bg-emerald-500';
+                syncPing.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
+            } else {
+                syncSpinner.classList.remove('animate-spin');
+                syncStatusText.innerText = 'Modo Offline / Caché';
+                syncBtnLabel.innerText = 'Reintentar';
+                syncDot.className = 'relative inline-flex rounded-full h-3 w-3 bg-slate-500';
+                syncPing.className = 'hidden';
+            }
+
+            const bcvTime = formatTimeShort(state.timestamps.BCV);
+            const binanceTime = formatTimeShort(state.timestamps.BINANCE);
+            lastUpdateTime.innerText = `BCV: ${bcvTime} | Binance: ${binanceTime}`;
+            
+            bcvTimeBadge.innerText = bcvTime !== '--:--' ? bcvTime : 'API';
+            binanceTimeBadge.innerText = binanceTime !== '--:--' ? binanceTime : 'API';
+        }
+
+        // Local Storage Sync
+        function loadSavedRates() {
+            try {
+                const saved = localStorage.getItem('vzn_calculator_data');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state.rates = { ...DEFAULT_RATES, ...(parsed.rates || {}) };
+                    state.timestamps = { ...(parsed.timestamps || {}) };
+                }
+            } catch (e) {
+                console.error('Error cargando tasas:', e);
+            }
+        }
+
+        function saveRatesToStorage() {
+            try {
+                localStorage.setItem('vzn_calculator_data', JSON.stringify({
+                    rates: state.rates,
+                    timestamps: state.timestamps
+                }));
+            } catch (e) {
+                console.error('Error guardando tasas:', e);
+            }
+        }
+
+        // Calculation Engine
+        function calculate() {
+            const rawAmount = parseFloat(amountInput.value) || 0;
+            state.amount = rawAmount;
+
+            const activeRate = state.rates[state.activeRateType];
+            
+            let resultFormatted = '';
+            if (state.direction === 'USD_TO_VES') {
+                const totalVES = rawAmount * activeRate;
+                resultFormatted = formatVES(totalVES);
+            } else {
+                const totalUSD = activeRate > 0 ? rawAmount / activeRate : 0;
+                resultFormatted = formatUSD(totalUSD);
+            }
+            mainResultValue.innerText = resultFormatted;
+            activeRateNum.innerText = formatRate(activeRate);
+
+            // Comparison Calculation
+            let bcvTotal = 0;
+            let binanceTotal = 0;
+
+            if (state.direction === 'USD_TO_VES') {
+                bcvTotal = rawAmount * state.rates.BCV;
+                binanceTotal = rawAmount * state.rates.BINANCE;
+                cmpBcvTotal.innerText = formatVES(bcvTotal);
+                cmpBinanceTotal.innerText = formatVES(binanceTotal);
+
+                const diffBs = binanceTotal - bcvTotal;
+                const diffPct = state.rates.BCV > 0 ? ((state.rates.BINANCE - state.rates.BCV) / state.rates.BCV) * 100 : 0;
+
+                cmpDiffBs.innerText = `${diffBs >= 0 ? '+' : ''}${formatVES(diffBs)}`;
+                cmpDiffPct.innerText = `${diffPct >= 0 ? '+' : ''}${diffPct.toFixed(2)}%`;
+            } else {
+                bcvTotal = state.rates.BCV > 0 ? rawAmount / state.rates.BCV : 0;
+                binanceTotal = state.rates.BINANCE > 0 ? rawAmount / state.rates.BINANCE : 0;
+                cmpBcvTotal.innerText = formatUSD(bcvTotal);
+                cmpBinanceTotal.innerText = formatUSD(binanceTotal);
+
+                const diffUSD = bcvTotal - binanceTotal;
+                const diffPct = state.rates.BCV > 0 ? ((state.rates.BINANCE - state.rates.BCV) / state.rates.BCV) * 100 : 0;
+
+                cmpDiffBs.innerText = `${diffUSD >= 0 ? '+' : ''}${formatUSD(diffUSD)}`;
+                cmpDiffPct.innerText = `Brecha ${diffPct.toFixed(2)}%`;
+            }
+
+            updateCardSelectionVisuals();
+        }
+
+        // Visual Updates for Rate Cards
+        function updateCardSelectionVisuals() {
+            const cards = [
+                { id: 'BCV', el: cardBcv, border: 'border-blue-500', bg: 'bg-blue-950/20' },
+                { id: 'BINANCE', el: cardBinance, border: 'border-amber-500', bg: 'bg-amber-950/20' },
+                { id: 'CUSTOM', el: cardCustom, border: 'border-violet-500', bg: 'bg-violet-950/20' }
+            ];
+
+            cards.forEach(item => {
+                if (state.activeRateType === item.id) {
+                    item.el.classList.add(item.border, item.bg, 'ring-1', item.border);
+                    item.el.classList.remove('border-slate-800');
+                } else {
+                    item.el.classList.remove(item.border, item.bg, 'ring-1');
+                    item.el.classList.add('border-slate-800');
+                }
+            });
+
+            const labels = { BCV: 'Tasa BCV', BINANCE: 'Binance P2P', CUSTOM: 'Tasa Personal' };
+            activeRateBadge.innerText = labels[state.activeRateType];
+        }
+
+        // Render Rates Displays
+        function renderRates() {
+            rateBcvDisplay.innerText = formatRate(state.rates.BCV);
+            rateBinanceDisplay.innerText = formatRate(state.rates.BINANCE);
+            rateCustomDisplay.innerText = formatRate(state.rates.CUSTOM);
+        }
+
+        // Toggle Direction Logic (USD <-> VES)
+        function toggleDirection() {
+            if (state.direction === 'USD_TO_VES') {
+                state.direction = 'VES_TO_USD';
+                inputLabel.innerText = 'Monto a Convertir (Bolívares Bs)';
+                currencySymbol.innerText = 'Bs';
+                directionText.innerText = 'Invertir ($ ➔ Bs)';
+                resultTitle.innerText = 'Monto en Dólares ($)';
+                swapIcon.classList.add('rotate-180');
+                
+                if (parseFloat(amountInput.value) < 100) {
+                    amountInput.value = "1000";
+                }
+            } else {
+                state.direction = 'USD_TO_VES';
+                inputLabel.innerText = 'Monto a Convertir (USD $)';
+                currencySymbol.innerText = '$';
+                directionText.innerText = 'Invertir (Bs ➔ $)';
+                resultTitle.innerText = 'Monto en Bolívares (Bs)';
+                swapIcon.classList.remove('rotate-180');
+                
+                if (parseFloat(amountInput.value) > 500) {
+                    amountInput.value = "10";
+                }
+            }
+
+            updatePresetButtonsUI();
+            calculate();
+        }
+
+        function updatePresetButtonsUI() {
+            const container = document.getElementById('presets-container');
+            if (state.direction === 'USD_TO_VES') {
+                container.innerHTML = `
+                    <button data-preset="5" class="preset-btn btn-tap bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-lg border border-slate-700/60">$5</button>
+                    <button data-preset="10" class="preset-btn btn-tap bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-lg border border-slate-700/60">$10</button>
+                    <button data-preset="20" class="preset-btn btn-tap bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-lg border border-slate-700/60">$20</button>
+                    <button data-preset="50" class="preset-btn btn-tap bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-lg border border-slate-700/60">$50</button>
+                    <button data-preset="100" class="preset-btn btn-tap bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-lg border border-slate-700/60">$100</button>
+                `;
+            } else {
+                container.innerHTML = `
+                    <button data-preset="500" class="preset-btn btn-tap bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-lg border border-slate-700/60">500 Bs</button>
+                    <button data-preset="1000" class="preset-btn btn-tap bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-lg border border-slate-700/60">1.000 Bs</button>
+                    <button data-preset="2000" class="preset-btn btn-tap bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-lg border border-slate-700/60">2.000 Bs</button>
+                    <button data-preset="5000" class="preset-btn btn-tap bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-lg border border-slate-700/60">5.000 Bs</button>
+                    <button data-preset="10000" class="preset-btn btn-tap bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 rounded-lg border border-slate-700/60">10.000 Bs</button>
+                `;
+            }
+            attachPresetEvents();
+        }
+
+        function attachPresetEvents() {
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const val = btn.getAttribute('data-preset');
+                    amountInput.value = val;
+                    calculate();
+                });
+            });
+        }
+
+        // Modal Controls
+        function openModal() {
+            modalInputBcv.value = state.rates.BCV;
+            modalInputBinance.value = state.rates.BINANCE;
+            modalInputCustom.value = state.rates.CUSTOM;
+            ratesModal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            ratesModal.classList.add('hidden');
+        }
+
+        function saveModalRates() {
+            const bcv = parseFloat(modalInputBcv.value) || state.rates.BCV;
+            const binance = parseFloat(modalInputBinance.value) || state.rates.BINANCE;
+            const custom = parseFloat(modalInputCustom.value) || state.rates.CUSTOM;
+
+            state.rates.BCV = bcv;
+            state.rates.BINANCE = binance;
+            state.rates.CUSTOM = custom;
+            state.timestamps.lastFetch = new Date().toISOString();
+
+            saveRatesToStorage();
+            renderRates();
+            calculate();
+            closeModal();
+            showToast('Tasas modificadas manualmente y guardadas.');
+        }
+
+        // Toast Notification System
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            toastMsg.innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Copy Summary to Clipboard
+        function copySummary() {
+            const currentAmount = state.amount;
+            const activeRateName = state.activeRateType === 'BCV' ? 'BCV' : (state.activeRateType === 'BINANCE' ? 'Binance P2P' : 'Personal');
+            const rateVal = state.rates[state.activeRateType];
+            const resultText = mainResultValue.innerText;
+
+            let textToCopy = "";
+            if (state.direction === 'USD_TO_VES') {
+                textToCopy = `🇻🇪 *Calculadora Cambio VZN*\n\n💵 *Monto:* $${currentAmount}\n📊 *Tasa (${activeRateName}):* Bs. ${rateVal}\n💰 *Total:* ${resultText}\n\n_BCV: Bs. ${state.rates.BCV} | Binance P2P: Bs. ${state.rates.BINANCE}_`;
+            } else {
+                textToCopy = `🇻🇪 *Calculadora Cambio VZN*\n\n🇻🇪 *Monto:* Bs. ${currentAmount}\n📊 *Tasa (${activeRateName}):* Bs. ${rateVal}\n💵 *Total:* ${resultText}\n\n_BCV: Bs. ${state.rates.BCV} | Binance P2P: Bs. ${state.rates.BINANCE}_`;
+            }
+
+            const el = document.createElement('textarea');
+            el.value = textToCopy;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+
+            showToast('Resumen copiado al portapapeles 📋');
+        }
+
+        // Event Listeners Initialization
+        function initEvents() {
+            amountInput.addEventListener('input', calculate);
+
+            btnToggleDirection.addEventListener('click', toggleDirection);
+
+            cardBcv.addEventListener('click', () => {
+                state.activeRateType = 'BCV';
+                calculate();
+            });
+
+            cardBinance.addEventListener('click', () => {
+                state.activeRateType = 'BINANCE';
+                calculate();
+            });
+
+            cardCustom.addEventListener('click', () => {
+                state.activeRateType = 'CUSTOM';
+                calculate();
+            });
+
+            btnOpenModal.addEventListener('click', openModal);
+            btnCloseModal.addEventListener('click', closeModal);
+            btnSaveRates.addEventListener('click', saveModalRates);
+            
+            ratesModal.addEventListener('click', (e) => {
+                if (e.target === ratesModal) closeModal();
+            });
+
+            // Refresh button
+            btnQuickSync.addEventListener('click', () => {
+                fetchRatesFromAPI(true);
+            });
+
+            document.getElementById('btn-copy-result').addEventListener('click', copySummary);
+
+            attachPresetEvents();
+        }
+
+        // Initial Load Routine
+        window.addEventListener('DOMContentLoaded', async () => {
+            loadSavedRates();
+            renderRates();
+            calculate();
+            initEvents();
+
+            // Perform automatic background API query
+            await fetchRatesFromAPI(false);
+        });
+    </script>
+</body>
+</html>
